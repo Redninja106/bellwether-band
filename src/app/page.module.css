@@ -1,33 +1,211 @@
 .page {
+  --cream: rgb(255, 247, 224);
+  --bronze-copy: rgba(228, 196, 128, 0.82);
+  --content-card-width: 42rem;
+  position: relative;
+  z-index: 1;
+  width: min(100%, 150vh);
   min-height: 100vh;
+  min-height: 100svh;
+  margin-inline: auto;
   display: flex;
   flex-direction: column;
   padding: 2rem 1rem 1.5rem;
-  text-shadow: 1px 1px 0px rgb(40, 35, 10, 1);
 }
 
 .title {
-  font-size: 144px;
+  max-width: 100%;
+  font-size: min(144px, 14.5vw, 21.75vh);
+  line-height: 0.82;
+  white-space: nowrap;
   text-align: center;
   color: rgb(83, 69, 23);
   text-shadow: 2px 2px 0px rgb(40, 35, 10, 1);
 }
 
+.release {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-items: start;
+  gap: 1.5rem;
+  margin: clamp(2.25rem, 5vh, 4.5rem) auto;
+  padding: clamp(0.9rem, 2vw, 1.25rem);
+  width: min(100%, var(--content-card-width));
+  border: 1px solid rgba(190, 151, 79, 0.58);
+  background:
+    radial-gradient(
+      circle at 28% 42%,
+      rgba(113, 71, 25, 0.13),
+      transparent 44%
+    ),
+    linear-gradient(115deg, rgba(3, 14, 9, 0.56), rgba(7, 24, 15, 0.3));
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 244, 213, 0.06),
+    0 0 2.25rem rgba(190, 151, 79, 0.16),
+    0 1.5rem 4rem rgba(2, 9, 6, 0.25);
+}
+
+.artwork {
+  position: relative;
+  padding: 0.45rem;
+  background: rgba(246, 225, 177, 0.5);
+  box-shadow:
+    0 1.5rem 4rem rgba(8, 11, 7, 0.36),
+    0 0 0 1px rgba(255, 245, 218, 0.45);
+  transform: rotate(-1.1deg);
+}
+
+.cover {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.releaseDetails {
+  padding: 1.15rem 0.25rem 0.25rem;
+  border-top: 1px solid rgba(190, 151, 79, 0.42);
+  color: var(--cream);
+  text-shadow: 1px 1px 0 rgba(25, 19, 7, 0.75);
+}
+
+.eyebrow {
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 0.72rem;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+}
+
+.eyebrow {
+  margin-bottom: 0.65rem;
+  color: var(--bronze-copy);
+}
+
+.releaseTitle {
+  font-size: clamp(3.25rem, 5.5vw, 4.5rem);
+  font-weight: 300;
+  line-height: 0.83;
+  letter-spacing: -0.045em;
+  white-space: nowrap;
+}
+
+.streamLabel {
+  color: var(--bronze-copy);
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 0.72rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.streamRow {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+  margin-top: 1.5rem;
+}
+
+.streamingLinks {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.iconLink {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.2rem;
+  opacity: 0.9;
+  transition: opacity 160ms ease, transform 160ms ease;
+}
+
+.iconLink:hover,
+.iconLink:focus-visible {
+  opacity: 1;
+  transform: translateY(-1px);
+}
+
+.iconLink:focus-visible {
+  outline: 2px solid var(--cream);
+  outline-offset: 3px;
+}
+
+.platformIcon {
+  display: block;
+  width: 1.2rem;
+  height: 1.2rem;
+  filter: brightness(0) saturate(100%) invert(96%) sepia(18%) saturate(423%)
+    hue-rotate(327deg) brightness(104%) contrast(102%);
+}
+
+.shows {
+  position: relative;
+  width: min(100%, var(--content-card-width));
+  margin: 0 auto clamp(3.5rem, 8vh, 6rem);
+  padding: clamp(1.5rem, 3vw, 2.25rem);
+  color: var(--cream);
+  text-align: center;
+  border: 1px solid rgba(190, 151, 79, 0.58);
+  background:
+    radial-gradient(
+      circle at 28% 42%,
+      rgba(113, 71, 25, 0.13),
+      transparent 44%
+    ),
+    linear-gradient(115deg, rgba(3, 14, 9, 0.56), rgba(7, 24, 15, 0.3));
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 244, 213, 0.06),
+    0 0 2.25rem rgba(190, 151, 79, 0.16),
+    0 1.5rem 4rem rgba(2, 9, 6, 0.25);
+  text-shadow: 1px 1px 0 rgba(25, 19, 7, 0.75);
+}
+
+.shows .eyebrow {
+  margin-bottom: 0.45rem;
+}
+
+.showsTitle {
+  font-size: clamp(2.75rem, 6vw, 4.25rem);
+  font-weight: 300;
+  line-height: 0.9;
+  letter-spacing: -0.035em;
+}
+
+.showsEmpty {
+  margin-top: 1.5rem;
+  color: var(--bronze-copy);
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 0.78rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
 .footer {
   display: flex;
+  flex-wrap: nowrap;
   align-items: center;
   justify-content: center;
   gap: 1.125rem;
   margin: auto auto 0;
   padding: 0.875rem 1.125rem;
   width: fit-content;
-  border-radius: 999px;
-  background: transparent;
-  box-shadow: none;
+  max-width: 100%;
+  border: 1px solid rgba(190, 151, 79, 0.58);
+  background:
+    radial-gradient(
+      circle at 28% 42%,
+      rgba(113, 71, 25, 0.13),
+      transparent 44%
+    ),
+    linear-gradient(115deg, rgba(3, 14, 9, 0.56), rgba(7, 24, 15, 0.3));
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 244, 213, 0.06),
+    0 0 1.75rem rgba(190, 151, 79, 0.18),
+    0 0.75rem 2rem rgba(2, 9, 6, 0.2);
 }
 
 .copyright {
-  color: rgba(255, 255, 255, 0.72);
+  color: var(--cream);
   font-size: 0.95rem;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -37,36 +215,52 @@
   display: flex;
   align-items: center;
   gap: 0.75rem;
+  padding-left: 1.125rem;
+  border-left: 1px solid rgba(190, 151, 79, 0.58);
 }
 
-.icons a {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 2.15rem;
-  height: 2.15rem;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.12);
-  border: 1px solid rgba(255, 255, 255, 0.18);
-  transition:
-    transform 0.2s ease,
-    background-color 0.2s ease,
-    border-color 0.2s ease;
-}
+@media (max-width: 700px) {
+  .page {
+    padding-top: 1.35rem;
+  }
 
-.icons a:hover {
-  transform: translateY(-1px);
-  background: rgba(23, 23, 23, 0.72);
-  border-color: rgba(23, 23, 23, 0.72);
-}
+  .release {
+    grid-template-columns: 1fr;
+    align-items: start;
+    gap: 1.5rem;
+    margin: 2.5rem auto 3rem;
+    padding: 0.85rem;
+    width: min(86vw, 26rem);
+  }
 
-.icon {
-  width: 1.1rem;
-  height: 1.1rem;
-  display: block;
-  transition: filter 0.2s ease, opacity 0.2s ease;
-}
+  .artwork {
+    padding: 0.35rem;
+  }
 
-.icons a:hover .icon {
-  filter:  invert(1);
+  .releaseDetails {
+    padding: 1.1rem 0.25rem 0;
+  }
+
+  .releaseTitle {
+    font-size: clamp(3rem, 15vw, 4.25rem);
+  }
+
+  .shows {
+    width: min(86vw, 26rem);
+    margin-bottom: 3.5rem;
+    padding-inline: 0.5rem;
+  }
+
+  .showsTitle {
+    font-size: clamp(2.65rem, 13vw, 3.5rem);
+  }
+
+  .footer {
+    gap: 0.8rem;
+    padding-inline: 0.9rem;
+  }
+
+  .icons {
+    padding-left: 0.8rem;
+  }
 }

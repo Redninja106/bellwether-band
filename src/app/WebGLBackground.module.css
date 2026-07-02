@@ -1,0 +1,100 @@
+.scene {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+  background: #05120c;
+}
+
+.canvas,
+.fallback {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.canvas {
+  display: block;
+  opacity: 0;
+  transition: opacity 220ms ease;
+}
+
+.ready {
+  opacity: 1;
+}
+
+.fallback {
+  overflow: hidden;
+  background: #05120c;
+  transition: opacity 220ms ease;
+}
+
+.fallbackHidden {
+  opacity: 0;
+}
+
+.fallbackArtwork {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: min(100vw, 150vh);
+  aspect-ratio: 5127 / 3418;
+  transform: translate(-50%, -50%);
+}
+
+.fallbackArtwork img {
+  position: absolute;
+  display: block;
+  max-width: none;
+}
+
+.fallbackBackground {
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.fallbackGround {
+  left: 0;
+  top: 78.086%;
+  width: 100%;
+  height: 21.914%;
+}
+
+.fallbackTree {
+  left: 49.268%;
+  top: 16.325%;
+  width: 19.193%;
+  height: 70.158%;
+}
+
+.fallbackSun {
+  left: 9.703%;
+  top: -1.697%;
+  width: 18.1%;
+  height: 23.845%;
+}
+
+@media (orientation: portrait) {
+  .fallbackArtwork {
+    width: 150vh;
+    height: 100vh;
+  }
+
+  .fallbackSun {
+    position: fixed !important;
+    top: -2vh !important;
+    left: 6vw !important;
+    width: 27.15vh !important;
+    height: 23.845vh !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .canvas,
+  .fallback {
+    transition: none;
+  }
+}
