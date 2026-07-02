@@ -62,6 +62,14 @@
 }
 
 .releaseDetails {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas:
+    "eyebrow eyebrow"
+    "title stream";
+  align-items: end;
+  column-gap: 1rem;
+  row-gap: 0.75rem;
   padding: 1.15rem 0.25rem 0.25rem;
   border-top: 1px solid rgba(190, 151, 79, 0.42);
   color: var(--cream);
@@ -69,6 +77,7 @@
 }
 
 .eyebrow {
+  grid-area: eyebrow;
   font-family: Georgia, "Times New Roman", serif;
   font-size: 0.72rem;
   letter-spacing: 0.22em;
@@ -81,6 +90,7 @@
 }
 
 .releaseTitle {
+  grid-area: title;
   font-size: clamp(3.25rem, 5.5vw, 4.5rem);
   font-weight: 300;
   line-height: 0.83;
@@ -97,10 +107,13 @@
 }
 
 .streamRow {
+  grid-area: stream;
   display: flex;
   align-items: center;
   gap: 1.25rem;
-  margin-top: 1.5rem;
+  justify-self: end;
+  align-self: end;
+  margin-top: 0;
 }
 
 .streamingLinks {
@@ -237,7 +250,18 @@
   }
 
   .releaseDetails {
+    grid-template-columns: 1fr;
+    grid-template-areas:
+      "eyebrow"
+      "title"
+      "stream";
+    align-items: start;
+    justify-items: start;
     padding: 1.1rem 0.25rem 0;
+  }
+
+  .streamRow {
+    justify-self: start;
   }
 
   .releaseTitle {
