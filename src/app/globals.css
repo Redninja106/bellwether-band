@@ -3,13 +3,6 @@
   --foreground: #171717;
 }
 
-@font-face {
-  font-family: "Cormorant Garamond";
-  src: url("/CormorantGaramond-Light.ttf") format("truetype");
-  font-style: normal;
-  font-display: swap;
-}
-
 html {
   height: 100%;
   text-shadow: 1px 1px 0px rgb(40, 35, 10, 1);
@@ -27,7 +20,7 @@ body {
   flex-direction: column;
   color: var(--foreground);
   background: var(--background);
-  font-family: "Cormorant Garamond", "Bell MT", Georgia, serif;
+  font-family: inherit;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }

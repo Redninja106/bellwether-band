@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import styles from "./WebGLBackground.module.css";
+import { assetPath } from "./assetPath";
 import {
   generateVoronoiEdges,
   type CurvedEdge,
@@ -13,20 +14,22 @@ const SOURCE_HEIGHT = 3418;
 const DESIGN_WIDTH = 1500;
 const DESIGN_HEIGHT = 1000;
 const CURVE_SAMPLES = 12;
-const EDGE_SOFTNESS = 2;
-const RAIL_THICKNESS = 2.5;
-const COLOR_GRAIN = 0.259;
+const EDGE_SOFTNESS = 2.5;
+const RAIL_THICKNESS = 3.5;
+const COLOR_GRAIN = 0.459;
 const MASK_GRAIN = 0.037;
-const LATTICE_OPACITY = 0.3;
-const WIND_STRENGTH = 20;
-const WIND_SPEED = 0.65;
+const LATTICE_OPACITY = 0.45;
+const WIND_STRENGTH = 30;
+const WIND_SPEED = 0.85;
+const TREE_SWAY_STRENGTH = 28;
+const TREE_MESH_SEGMENTS = 20;
 const MAX_DPR = 1.5;
 
 const ASSETS = {
-  background: "/scene/background.webp",
-  ground: "/scene/ground.webp",
-  tree: "/scene/tree.webp",
-  sun: "/scene/sun.webp",
+  background: assetPath("/scene/background.webp"),
+  ground: assetPath("/scene/ground.webp"),
+  tree: assetPath("/scene/tree.webp"),
+  sun: assetPath("/scene/sun.webp"),
 } as const;
 
 type Rect = {
@@ -55,10 +58,18 @@ const TEXTURE_VERTEX_SHADER = `#version 300 es
 in vec2 a_position;
 in vec2 a_uv;
 uniform vec2 u_viewport;
+uniform float u_time;
+uniform float u_sway;
 out vec2 v_uv;
 
 void main() {
-  vec2 clip = (a_position / u_viewport) * 2.0 - 1.0;
+  float height = 1.0 - a_uv.y;
+  float bend = sin(u_time * 0.72) * pow(height, 1.7);
+  float flutter = sin(u_time * 1.13 + a_uv.y * 4.2) * pow(height, 2.2) * 0.24;
+  vec2 position = a_position;
+  position.x += (bend + flutter) * u_sway;
+
+  vec2 clip = (position / u_viewport) * 2.0 - 1.0;
   gl_Position = vec4(clip.x, -clip.y, 0.0, 1.0);
   v_uv = a_uv;
 }`;
@@ -77,22 +88,25 @@ const LATTICE_VERTEX_SHADER = `#version 300 es
 in vec2 a_position;
 in float a_distance;
 in float a_railHalfWidth;
+in vec2 a_materialPosition;
 uniform vec2 u_viewport;
 out float v_distance;
 out float v_railHalfWidth;
+out vec2 v_materialPosition;
 
 void main() {
   vec2 clip = (a_position / u_viewport) * 2.0 - 1.0;
   gl_Position = vec4(clip.x, -clip.y, 0.0, 1.0);
   v_distance = a_distance;
   v_railHalfWidth = a_railHalfWidth;
+  v_materialPosition = a_materialPosition;
 }`;
 
 const LATTICE_FRAGMENT_SHADER = `#version 300 es
 precision highp float;
 in float v_distance;
 in float v_railHalfWidth;
-uniform float u_dpr;
+in vec2 v_materialPosition;
 out vec4 outColor;
 
 float hash(vec2 point) {
@@ -115,19 +129,30 @@ float valueNoise(vec2 point) {
 }
 
 void main() {
-  vec2 pixel = gl_FragCoord.xy / u_dpr;
+  vec2 pixel = v_materialPosition;
+  float crossBand = v_distance / max(v_railHalfWidth, 0.001);
   float edgeDistance = abs(v_distance) - v_railHalfWidth;
   float coverage = 1.0 - smoothstep(-${EDGE_SOFTNESS.toFixed(1)}, ${EDGE_SOFTNESS.toFixed(1)}, edgeDistance);
 
-  float broadGrain = valueNoise(pixel * 0.075);
-  float fineGrain = valueNoise(pixel * 0.38 + vec2(19.3, 47.1));
+  float broadGrain = valueNoise(
+    pixel * 0.075 + vec2(crossBand * 0.24, crossBand * -0.17)
+  );
+  float fineGrain = valueNoise(
+    pixel * 0.38 + vec2(19.3, 47.1) +
+    vec2(crossBand * 0.65, crossBand * 0.46)
+  );
   float pigmentNoise = broadGrain * 0.42 + fineGrain * 0.58;
   float pigmentBrightness = 1.0 + (pigmentNoise - 0.5) * ${COLOR_GRAIN.toFixed(3)} * 1.65;
   vec3 pigmentColor = vec3(148.0, 92.0, 41.0) / 255.0;
   pigmentColor *= pigmentBrightness * 0.92;
 
-  float maskNoise = valueNoise(pixel * 0.57 + vec2(73.7, 11.9));
-  float poreNoise = hash(pixel * 1.91);
+  float maskNoise = valueNoise(
+    pixel * 0.57 + vec2(73.7, 11.9) +
+    vec2(crossBand * 0.90, crossBand * -0.64)
+  );
+  float poreNoise = hash(
+    pixel * 1.91 + vec2(crossBand * 1.30, crossBand * -0.94)
+  );
   float clusteredMist = smoothstep(0.16, 0.84, maskNoise);
   float paintMask = poreNoise;
   paintMask *= 1.0 - ${MASK_GRAIN.toFixed(3)} * 0.22 * (1.0 - clusteredMist);
@@ -299,67 +324,96 @@ function transformedPoint(
   };
 }
 
-function appendRailSegment(
+function pointNormal(points: Point[], index: number): Point {
+  const previous = points[Math.max(0, index - 1)];
+  const next = points[Math.min(points.length - 1, index + 1)];
+  const dx = next.x - previous.x;
+  const dy = next.y - previous.y;
+  const magnitude = Math.hypot(dx, dy);
+  return magnitude < 0.001
+    ? { x: 0, y: 1 }
+    : { x: -dy / magnitude, y: dx / magnitude };
+}
+
+function appendRailStrip(
   output: number[],
-  start: Point,
-  end: Point,
+  points: Point[],
+  materialPoints: Point[],
   railOffset: number,
   railHalfWidth: number,
   halfWidth: number,
+  noiseOffset: Point,
 ) {
-  const dx = end.x - start.x;
-  const dy = end.y - start.y;
-  const magnitude = Math.hypot(dx, dy);
-  if (magnitude < 0.001) return;
-  const tangentX = dx / magnitude;
-  const tangentY = dy / magnitude;
-  const normalX = -tangentY;
-  const normalY = tangentX;
-  const centerStartX = start.x + normalX * railOffset;
-  const centerStartY = start.y + normalY * railOffset;
-  const centerEndX = end.x + normalX * railOffset;
-  const centerEndY = end.y + normalY * railOffset;
-  const extension = Math.min(halfWidth, magnitude * 0.25);
-  const startX = centerStartX - tangentX * extension;
-  const startY = centerStartY - tangentY * extension;
-  const endX = centerEndX + tangentX * extension;
-  const endY = centerEndY + tangentY * extension;
+  const pairs = points.map((point, index) => {
+    const normal = pointNormal(points, index);
+    const materialNormal = pointNormal(materialPoints, index);
+    const materialPoint = materialPoints[index];
+    const center = {
+      x: point.x + normal.x * railOffset,
+      y: point.y + normal.y * railOffset,
+    };
+    const materialCenter = {
+      x: materialPoint.x + materialNormal.x * railOffset + noiseOffset.x,
+      y: materialPoint.y + materialNormal.y * railOffset + noiseOffset.y,
+    };
 
-  const ax = startX + normalX * halfWidth;
-  const ay = startY + normalY * halfWidth;
-  const bx = startX - normalX * halfWidth;
-  const by = startY - normalY * halfWidth;
-  const cx = endX + normalX * halfWidth;
-  const cy = endY + normalY * halfWidth;
-  const dx2 = endX - normalX * halfWidth;
-  const dy2 = endY - normalY * halfWidth;
+    return {
+      positive: {
+        x: center.x + normal.x * halfWidth,
+        y: center.y + normal.y * halfWidth,
+      },
+      negative: {
+        x: center.x - normal.x * halfWidth,
+        y: center.y - normal.y * halfWidth,
+      },
+      materialPositive: {
+        x: materialCenter.x + materialNormal.x * halfWidth,
+        y: materialCenter.y + materialNormal.y * halfWidth,
+      },
+      materialNegative: {
+        x: materialCenter.x - materialNormal.x * halfWidth,
+        y: materialCenter.y - materialNormal.y * halfWidth,
+      },
+    };
+  });
 
-  output.push(
-    ax,
-    ay,
-    halfWidth,
-    railHalfWidth,
-    bx,
-    by,
-    -halfWidth,
-    railHalfWidth,
-    cx,
-    cy,
-    halfWidth,
-    railHalfWidth,
-    cx,
-    cy,
-    halfWidth,
-    railHalfWidth,
-    bx,
-    by,
-    -halfWidth,
-    railHalfWidth,
-    dx2,
-    dy2,
-    -halfWidth,
-    railHalfWidth,
-  );
+  const pushVertex = (
+    position: Point,
+    distance: number,
+    materialPosition: Point,
+  ) => {
+    output.push(
+      position.x,
+      position.y,
+      distance,
+      railHalfWidth,
+      materialPosition.x,
+      materialPosition.y,
+    );
+  };
+
+  for (let index = 1; index < pairs.length; index += 1) {
+    const previous = pairs[index - 1];
+    const current = pairs[index];
+    pushVertex(
+      previous.positive,
+      halfWidth,
+      previous.materialPositive,
+    );
+    pushVertex(
+      previous.negative,
+      -halfWidth,
+      previous.materialNegative,
+    );
+    pushVertex(current.positive, halfWidth, current.materialPositive);
+    pushVertex(current.positive, halfWidth, current.materialPositive);
+    pushVertex(
+      previous.negative,
+      -halfWidth,
+      previous.materialNegative,
+    );
+    pushVertex(current.negative, -halfWidth, current.materialNegative);
+  }
 }
 
 function buildLatticeVertices(
@@ -371,54 +425,83 @@ function buildLatticeVertices(
 ) {
   const vertices: number[] = [];
 
-  for (const edge of edges) {
-    const start = warpPoint(
-      transformedPoint(edge.start, transform, shiftX, shiftY),
-      time,
+  for (let edgeIndex = 0; edgeIndex < edges.length; edgeIndex += 1) {
+    const edge = edges[edgeIndex];
+    const materialStart = transformedPoint(
+      edge.start,
+      transform,
+      shiftX,
+      shiftY,
     );
-    const controlA = warpPoint(
-      transformedPoint(edge.controlA, transform, shiftX, shiftY),
-      time,
+    const materialControlA = transformedPoint(
+      edge.controlA,
+      transform,
+      shiftX,
+      shiftY,
     );
-    const controlB = warpPoint(
-      transformedPoint(edge.controlB, transform, shiftX, shiftY),
-      time,
+    const materialControlB = transformedPoint(
+      edge.controlB,
+      transform,
+      shiftX,
+      shiftY,
     );
-    const end = warpPoint(
-      transformedPoint(edge.end, transform, shiftX, shiftY),
-      time,
+    const materialEnd = transformedPoint(
+      edge.end,
+      transform,
+      shiftX,
+      shiftY,
     );
+    const start = warpPoint(materialStart, time);
+    const controlA = warpPoint(materialControlA, time);
+    const controlB = warpPoint(materialControlB, time);
+    const end = warpPoint(materialEnd, time);
     const railOffset = edge.thickness * transform.scale;
     const railHalfWidth = RAIL_THICKNESS * transform.scale * 0.72;
     const expandedHalfWidth = railHalfWidth + EDGE_SOFTNESS;
-    let previous = start;
+    const points = [start];
+    const materialPoints = [materialStart];
 
     for (let sample = 1; sample <= CURVE_SAMPLES; sample += 1) {
-      const current = cubicPoint(
-        start,
-        controlA,
-        controlB,
-        end,
-        sample / CURVE_SAMPLES,
+      const amount = sample / CURVE_SAMPLES;
+      points.push(
+        cubicPoint(start, controlA, controlB, end, amount),
       );
-      appendRailSegment(
-        vertices,
-        previous,
-        current,
-        railOffset,
-        railHalfWidth,
-        expandedHalfWidth,
+      materialPoints.push(
+        cubicPoint(
+          materialStart,
+          materialControlA,
+          materialControlB,
+          materialEnd,
+          amount,
+        ),
       );
-      appendRailSegment(
-        vertices,
-        previous,
-        current,
-        -railOffset,
-        railHalfWidth,
-        expandedHalfWidth,
-      );
-      previous = current;
     }
+
+    const noisePhase = (edgeIndex + 1) * 12.9898;
+    appendRailStrip(
+      vertices,
+      points,
+      materialPoints,
+      railOffset,
+      railHalfWidth,
+      expandedHalfWidth,
+      {
+        x: Math.sin(noisePhase + 18.31) * 137.2,
+        y: Math.sin(noisePhase * 1.73 + 4.17) * 119.8,
+      },
+    );
+    appendRailStrip(
+      vertices,
+      points,
+      materialPoints,
+      -railOffset,
+      railHalfWidth,
+      expandedHalfWidth,
+      {
+        x: Math.sin(noisePhase + 71.93) * 131.6,
+        y: Math.sin(noisePhase * 1.91 + 39.41) * 127.4,
+      },
+    );
   }
 
   return new Float32Array(vertices);
@@ -431,33 +514,31 @@ function drawTexture(
   rect: Rect,
   viewportWidth: number,
   viewportHeight: number,
+  time = 0,
+  sway = 0,
+  verticalSegments = 1,
 ) {
-  const vertices = new Float32Array([
-    rect.x,
-    rect.y,
-    0,
-    0,
-    rect.x,
-    rect.y + rect.height,
-    0,
-    1,
-    rect.x + rect.width,
-    rect.y,
-    1,
-    0,
-    rect.x + rect.width,
-    rect.y,
-    1,
-    0,
-    rect.x,
-    rect.y + rect.height,
-    0,
-    1,
-    rect.x + rect.width,
-    rect.y + rect.height,
-    1,
-    1,
-  ]);
+  const vertexData: number[] = [];
+
+  for (let segment = 0; segment < verticalSegments; segment += 1) {
+    const topUv = segment / verticalSegments;
+    const bottomUv = (segment + 1) / verticalSegments;
+    const top = rect.y + rect.height * topUv;
+    const bottom = rect.y + rect.height * bottomUv;
+    const left = rect.x;
+    const right = rect.x + rect.width;
+
+    vertexData.push(
+      left, top, 0, topUv,
+      left, bottom, 0, bottomUv,
+      right, top, 1, topUv,
+      right, top, 1, topUv,
+      left, bottom, 0, bottomUv,
+      right, bottom, 1, bottomUv,
+    );
+  }
+
+  const vertices = new Float32Array(vertexData);
 
   gl.useProgram(resources.textureProgram);
   gl.bindBuffer(gl.ARRAY_BUFFER, resources.textureBuffer);
@@ -474,13 +555,21 @@ function drawTexture(
     viewportWidth,
     viewportHeight,
   );
+  gl.uniform1f(
+    gl.getUniformLocation(resources.textureProgram, "u_time"),
+    time,
+  );
+  gl.uniform1f(
+    gl.getUniformLocation(resources.textureProgram, "u_sway"),
+    sway,
+  );
   gl.activeTexture(gl.TEXTURE0);
   gl.bindTexture(gl.TEXTURE_2D, texture);
   gl.uniform1i(
     gl.getUniformLocation(resources.textureProgram, "u_texture"),
     0,
   );
-  gl.drawArrays(gl.TRIANGLES, 0, 6);
+  gl.drawArrays(gl.TRIANGLES, 0, vertices.length / 4);
 }
 
 function drawLattice(
@@ -489,7 +578,6 @@ function drawLattice(
   vertices: Float32Array,
   viewportWidth: number,
   viewportHeight: number,
-  dpr: number,
 ) {
   gl.useProgram(resources.latticeProgram);
   gl.bindBuffer(gl.ARRAY_BUFFER, resources.latticeBuffer);
@@ -501,22 +589,24 @@ function drawLattice(
     resources.latticeProgram,
     "a_railHalfWidth",
   );
+  const materialPosition = gl.getAttribLocation(
+    resources.latticeProgram,
+    "a_materialPosition",
+  );
   gl.enableVertexAttribArray(position);
-  gl.vertexAttribPointer(position, 2, gl.FLOAT, false, 16, 0);
+  gl.vertexAttribPointer(position, 2, gl.FLOAT, false, 24, 0);
   gl.enableVertexAttribArray(distance);
-  gl.vertexAttribPointer(distance, 1, gl.FLOAT, false, 16, 8);
+  gl.vertexAttribPointer(distance, 1, gl.FLOAT, false, 24, 8);
   gl.enableVertexAttribArray(railHalfWidth);
-  gl.vertexAttribPointer(railHalfWidth, 1, gl.FLOAT, false, 16, 12);
+  gl.vertexAttribPointer(railHalfWidth, 1, gl.FLOAT, false, 24, 12);
+  gl.enableVertexAttribArray(materialPosition);
+  gl.vertexAttribPointer(materialPosition, 2, gl.FLOAT, false, 24, 16);
   gl.uniform2f(
     gl.getUniformLocation(resources.latticeProgram, "u_viewport"),
     viewportWidth,
     viewportHeight,
   );
-  gl.uniform1f(
-    gl.getUniformLocation(resources.latticeProgram, "u_dpr"),
-    dpr,
-  );
-  gl.drawArrays(gl.TRIANGLES, 0, vertices.length / 4);
+  gl.drawArrays(gl.TRIANGLES, 0, vertices.length / 6);
 }
 
 function destroyResources(gl: WebGL2RenderingContext, resources: GLResources) {
@@ -705,7 +795,6 @@ export default function WebGLBackground() {
         ),
         width,
         height,
-        dpr,
       );
       drawTexture(
         gl,
@@ -722,6 +811,9 @@ export default function WebGLBackground() {
         layerRect(artwork, 2526, 558, 984, 2398),
         width,
         height,
+        time,
+        reducedMotion.matches ? 0 : TREE_SWAY_STRENGTH * artwork.scale,
+        TREE_MESH_SEGMENTS,
       );
       drawTexture(
         gl,

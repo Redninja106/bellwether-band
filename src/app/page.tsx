@@ -1,50 +1,45 @@
 import Image from "next/image";
 import styles from "./page.module.css";
 import WebGLBackground from "./WebGLBackground";
-
-const YOUR_CALL_LINKS = {
-  spotify: "PASTE_SPOTIFY_SONG_URL_HERE",
-  appleMusic: "PASTE_APPLE_MUSIC_SONG_URL_HERE",
-  youtube: "PASTE_YOUTUBE_SONG_URL_HERE",
-} as const;
+import { assetPath } from "./assetPath";
 
 const socialLinks = [
   {
     href: "https://open.spotify.com/artist/3l7LxxzdvjfPuGjMsVbKrK",
-    src: "/spotify.svg",
+    src: assetPath("/spotify.svg"),
     alt: "Spotify",
   },
   {
-    href: "https://music.apple.com/",
-    src: "/applemusic.svg",
+    href: "https://music.apple.com/us/artist/bellwether/6786752383",
+    src: assetPath("/applemusic.svg"),
     alt: "Apple Music",
   },
   {
     href: "https://www.instagram.com/bellwether_theband/",
-    src: "/instagram.svg",
+    src: assetPath("/instagram.svg"),
     alt: "Instagram",
   },
   {
     href: "https://www.youtube.com/",
-    src: "/youtube.svg",
+    src: assetPath("/youtube.svg"),
     alt: "YouTube",
   },
 ] as const;
 
 const streamingLinks = [
   {
-    href: YOUR_CALL_LINKS.spotify,
-    src: "/spotify.svg",
+    href: "https://open.spotify.com/track/5BHpUI13fvzp8RlbDNUv8s",
+    src: assetPath("/spotify.svg"),
     alt: "Spotify",
   },
   {
-    href: YOUR_CALL_LINKS.appleMusic,
-    src: "/applemusic.svg",
+    href: "https://music.apple.com/us/song/your-call/6785685132",
+    src: assetPath("/applemusic.svg"),
     alt: "Apple Music",
   },
   {
-    href: YOUR_CALL_LINKS.youtube,
-    src: "/youtube.svg",
+    href:  "https://www.youtube.com/",
+    src: assetPath("/youtube.svg"),
     alt: "YouTube",
   },
 ] as const;
@@ -62,7 +57,7 @@ export default function Home() {
         <div className={styles.artwork}>
           <Image
             className={styles.cover}
-            src="/your-call.png"
+            src={assetPath("/your-call.webp")}
             alt="Your Call single cover art by Bellwether"
             width={4284}
             height={4284}
